@@ -523,14 +523,18 @@ function unifyObjectStyle (type, payload, options) {
 }
 
 export function install (_Vue) {
+  // 是否已经执行过了 Vue.use(Vuex)，如果在非生产环境多次执行，则提示错误
   if (Vue && _Vue === Vue) {
     if (__DEV__) {
       console.error(
         '[vuex] already installed. Vue.use(Vuex) should be called only once.'
       )
     }
+    // 如果执行过，直接返回即可，不需要再次做初始化
     return
   }
+  // 如果是第一次执行 Vue.use(Vuex)，则把传入的 _Vue 赋值给定义的变量 Vue
   Vue = _Vue
+  // Vuex 初始化逻辑，只会执行一次 applyMixin(Vue)，所以只会有一份唯一的 Store
   applyMixin(Vue)
 }
