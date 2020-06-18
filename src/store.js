@@ -28,6 +28,7 @@ export class Store {
     // store internal state
     this._committing = false
     this._actions = Object.create(null)
+    // action订阅者列表
     this._actionSubscribers = []
     this._mutations = Object.create(null)
     this._wrappedGetters = Object.create(null)
@@ -134,6 +135,7 @@ export class Store {
     }
 
     try {
+      //首先执行before函数列表
       this._actionSubscribers
         .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
         .filter(sub => sub.before)
@@ -144,13 +146,14 @@ export class Store {
         console.error(e)
       }
     }
-
+    // 执行针对从处理函数等等
     const result = entry.length > 1
       ? Promise.all(entry.map(handler => handler(payload)))
       : entry[0](payload)
 
     return result.then(res => {
       try {
+        // 再执行after函数列表
         this._actionSubscribers
           .filter(sub => sub.after)
           .forEach(sub => sub.after(action, this.state))
@@ -167,8 +170,9 @@ export class Store {
   subscribe (fn, options) {
     return genericSubscribe(fn, this._subscribers, options)
   }
-
+  // 定义action的前后拦截器
   subscribeAction (fn, options) {
+    // 如果fn为一个函数，则默认是before
     const subs = typeof fn === 'function' ? { before: fn } : fn
     return genericSubscribe(subs, this._actionSubscribers, options)
   }
@@ -237,7 +241,7 @@ export class Store {
     this._committing = committing
   }
 }
-
+//对处理函数进行处理，加入到subs也就是订阅者列表中
 function genericSubscribe (fn, subs, options) {
   if (subs.indexOf(fn) < 0) {
     options && options.prepend

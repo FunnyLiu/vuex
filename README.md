@@ -44,6 +44,60 @@ ignored: directory (2)
 ![img](./inner.svg)
   
 
+## 知识点
+
+### subscribeAction，在 action 被调用前后插入一些逻辑 aop原理
+
+相关api用法参考：[API 参考 | Vuex](https://vuex.vuejs.org/zh/api/#subscribeaction)。
+
+通过api调用genericSubscribe，完成对action订阅者列表的增加
+``` js
+// 定义action的前后拦截器
+subscribeAction (fn, options) {
+  // 如果fn为一个函数，则默认是before
+  const subs = typeof fn === 'function' ? { before: fn } : fn
+  return genericSubscribe(subs, this._actionSubscribers, options)
+}
+
+```
+
+然后在执行action时去aop的兼容before和after：
+
+``` js
+try {
+  //首先执行before函数列表
+  this._actionSubscribers
+    .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
+    .filter(sub => sub.before)
+    .forEach(sub => sub.before(action, this.state))
+} catch (e) {
+  if (__DEV__) {
+    console.warn(`[vuex] error in before action subscribers: `)
+    console.error(e)
+  }
+}
+// 执行针对从处理函数等等
+const result = entry.length > 1
+  ? Promise.all(entry.map(handler => handler(payload)))
+  : entry[0](payload)
+
+return result.then(res => {
+  try {
+    // 再执行after函数列表
+    this._actionSubscribers
+      .filter(sub => sub.after)
+      .forEach(sub => sub.after(action, this.state))
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(`[vuex] error in after action subscribers: `)
+      console.error(e)
+    }
+  }
+  return res
+})
+```
+
+
 
 
 
